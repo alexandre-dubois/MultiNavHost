@@ -22,9 +22,12 @@ class TabManager(private val mainActivity: MainActivity) {
     )
     private var currentTabId: Int = R.id.navigation_home
     var currentController: NavController? = null
-    private var tabHistory = TabHistory().apply { push(R.id.navigation_home) }
 
-    val navHomeController: NavController by lazy {
+    fun initDefaultController() {
+        currentController = navHomeController
+    }
+
+    private val navHomeController: NavController by lazy {
         mainActivity.findNavController(R.id.homeTab).apply {
             graph = navInflater.inflate(R.navigation.navigation_graph_main).apply {
                 startDestination = startDestinations.getValue(R.id.navigation_home)
@@ -50,15 +53,9 @@ class TabManager(private val mainActivity: MainActivity) {
     private val dashboardTabContainer: View by lazy { mainActivity.dashboardTabContainer }
     private val notificationsTabContainer: View by lazy { mainActivity.notificationsTabContainer }
 
-    fun onSaveInstanceState(outState: Bundle?) {
-        outState?.putSerializable(KEY_TAB_HISTORY, tabHistory)
-    }
-
     fun onRestoreInstanceState(savedInstanceState: Bundle?) {
         savedInstanceState?.let {
-            tabHistory = it.getSerializable(KEY_TAB_HISTORY) as TabHistory
-
-            switchTab(mainActivity.bottomNavigationView.selectedItemId, false)
+            switchTab(mainActivity.bottomNavigationView.selectedItemId)
         }
     }
 
@@ -68,14 +65,8 @@ class TabManager(private val mainActivity: MainActivity) {
 
     fun onBackPressed() {
         currentController?.let {
-            if (it.currentDestination == null || it.currentDestination?.id == startDestinations.getValue(currentTabId)) {
-                if (tabHistory.size > 1) {
-                    val tabId = tabHistory.popPrevious()
-                    switchTab(tabId, false)
-                    mainActivity.bottomNavigationView.menu.findItem(tabId)?.isChecked = true
-                } else {
-                    mainActivity.finish()
-                }
+            if (it.currentDestination?.id == startDestinations.getValue(currentTabId)) {
+                mainActivity.finish()
             }
             it.popBackStack()
         } ?: run {
@@ -83,7 +74,7 @@ class TabManager(private val mainActivity: MainActivity) {
         }
     }
 
-    fun switchTab(tabId: Int, addToHistory: Boolean = true) {
+    fun switchTab(tabId: Int) {
         currentTabId = tabId
 
         when (tabId) {
@@ -100,9 +91,6 @@ class TabManager(private val mainActivity: MainActivity) {
                 invisibleTabContainerExcept(notificationsTabContainer)
             }
         }
-        if (addToHistory) {
-            tabHistory.push(tabId)
-        }
     }
 
     private fun invisibleTabContainerExcept(container: View) {
@@ -113,7 +101,4 @@ class TabManager(private val mainActivity: MainActivity) {
         container.isInvisible = false
     }
 
-    companion object {
-        private const val KEY_TAB_HISTORY = "key_tab_history"
-    }
 }
